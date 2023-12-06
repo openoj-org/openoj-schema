@@ -235,29 +235,28 @@ function insert_user(name, passwordHash, mail, role, signature)
 			success: result.affectedRows != 0,
 			message: (result.affectedRows != 0) ? '注册成功' : '注册失败',
 			// 自动生成的用户 id
-			id: (result.affectedRows != 0) ? result.insertId : undefined
+			id: insertId
 		};
 	})
 	.catch(err => {
 		return {
 			success: false,
 			message: err.message,
-			id: undefined
+			id: null
 		};
 	});
 }
 
 function update_user(id, param, value)
 {
-	let padding = ((typeof(value) == 'number') ? '' : '"');
-	let sql = 'UPDATE users SET ' + param + ' = ' +
-	          padding + value + padding;
+	let sql = `UPDATE users SET ${param} = ${value}`;
 	if (param == 'user_name') {
-		sql += ', user_name_change_time = ' + new Date().getTime();
+		sql += `, user_name_change_time = ${new Date().getTime()}`;
 	} else if (param == 'user_email') {
-		sql += ', user_email_change_time = ' + new Date().getTime();
+		sql += `, user_email_change_time = ${new Date().getTime()}`;
 	}
-	sql += ' WHERE user_id = ' + id + ';';
+	sql += ` WHERE user_id = ${id};`;
+
 	return querySql(sql)
 	.then(result => {
 		return {
@@ -352,75 +351,69 @@ function delete_cookie(cookie) {
 }
 
 module.exports = {
-	/* 参数: 无
-	 * 作用: 返回包含表示全局设置查询结果的一个对象 {
-	 * 　　  　　// 以下为必有项
-	 * 　　  　　success,       // bool, 表示查询是否成功
-	 * 　　  　　message,       // string, 表示返回的消息
-	 * 　　  　　// 以下为 success = true 时存在项
-	 * 　　  　　allowRegister, // bool, 表示是否开放注册
-	 * 　　  　　haveList       // bool, 表示是否限制注册邮箱后缀
+    /* 参数: id,              // int, 表示题目 id
+	 *  　　 evaluation       // bool, 表示是否需要获取评价
+	 * 作用: 返回包含表示题目信息查询结果的一个对象 {
+	 * 　　      // 以下为必有项
+	 * 　　      success,         // bool, 表示更新是否成功
+	 * 　　      message,         // string, 表示返回的消息
+     * 　　      // 以下为 success = true 时存在项
+     * 　　      title,           // string, 表示题目的标题
+     * 　　      titleEn,         // string, 表示题目的英文标题
+     * 　　      source,          // string, 表示题目的来源
+     * 　　      submit,          // int, 表示题目的提交数
+     * 　　      pass,            // double, 表示题目的通过率
+     * 　　      type,            // int, 表示题目类型
+     * 　　      timeLimit,       // int, 表示时间限制 (ms)
+     * 　　      memoryLimit,     // int, 表示空间限制 (MB)
+     * 　　      background,      // string, 表示题目背景
+     * 　　      statement,       // string, 表示题目描述
+     * 　　      inputStatement,  // string, 表示题目的输入格式
+     * 　　      outputStatement, // string, 表示题目的输出格式
+     * 　　      rangeAndHint     // string, 表示题目的数据范围与提示
 	 * 　　  } 的 Promise 对象
 	 */
-	select_global_settings,
-
-	/* 参数: param, // string, 'allow_register'/'have_list'
-	 * 　　         // 表示是否开放注册/是否限制可注册邮箱后缀
-	 * 　　  value  // bool, 表示是否
-	 * 作用: 返回包含表示全局设置更新结果的一个对象 {
-	 * 　　  　　// 以下为必有项
-	 * 　　  　　success,       // bool, 表示更新是否成功
-	 * 　　  　　message        // string, 表示返回的消息
-	 * 　　  } 的 Promise 对象
-	 */
-	update_global_settings,
-
-	/* 参数: 无
-	 * 作用: 返回包含表示邮箱后缀列表查询结果的一个对象 {
-	 * 　　  　　// 以下为必有项
-	 * 　　  　　success,       // bool, 表示查询是否成功
-	 * 　　  　　message,       // string, 表示返回的消息
-	 * 　　  　　// 以下为 success = true 时存在项
-	 * 　　  　　suffixList     // array, 表示邮箱后缀 (string) 的列表
-	 * 　　  } 的 Promise 对象
-	 */
-	select_email_suffixes,
-
-	/* 参数: suffixes           // array, 表示邮箱后缀 (string) 的列表
-	 * 作用: 返回包含表示邮箱后缀列表更新结果的一个对象 {
-	 * 　　  　　// 以下为必有项
-	 * 　　  　　success,       // bool, 表示更新是否成功
-	 * 　　  　　message        // string, 表示返回的消息
-	 * 　　  } 的 Promise 对象
-	 */
-	insert_email_suffixes,
-
-	// 根据 id 查询用户信息
-	select_user_by_id,
-	// 根据 email 查询用户信息
-	select_user_by_email,
-	// 根据 name 查询用户信息
-	select_user_by_name,
-
-	select_full_user_by_email,
-	select_full_user_by_id,
-	select_full_user_by_name,
-
+    select_problem_by_id,
+    
 	// 根据某一参数 order 按 increase 升序或降序排列，
 	// 查询用户名含前缀为 usernameKeyword 的用户列表，
 	// 返回第 start 至 end 个结果组成的列表
-	select_users_by_param_order,
-	// 使用用户名 name, 密码哈希 passwordHash, 邮箱 mail,
-	// 角色 role, 签名 signature 注册用户
-	insert_user,
-	// 更新给定 id 的用户属性 param 为 value
-	update_user,
-	// 注销给定 id 的用户
-	delete_user,
-	// 插入 cookie
-	insert_cookie,
-	// 根据 cookie 查询 user_id
-	select_user_id_by_cookie,
-	// 销毁 cookie
-	delete_cookie
+	/* 参数: evaluation,       // bool, 表示是否需要获取评价
+	 * 　　  order,            // string, 'id'/'title'/'grade'
+	 * 　　                    // 表示 id/标题/评分 字段
+	 * 　　  increase,         // bool, 表示 升/降 序排列
+	 * 　　  titleKeyword,     // string, 如有则表示标题中含此关键词
+	 * 　　  sourceKeyword,    // string, 如有则表示来源中含此关键词
+	 * 　　  tagKeyword,       // string, 如有则表示标签中含此关键词
+	 * 　　  start,            // int, 返回列表头在所有结果中索引
+	 * 　　  end               // int, 返回列表尾在所有结果中索引
+	 * 作用: 返回包含表示题目列表查询结果的一个对象 {
+	 * 　　      // 以下为必有项
+	 * 　　      success,       // bool, 表示更新是否成功
+	 * 　　      message,       // string, 表示返回的消息
+     * 　　      // 以下为 success = true 时存在项
+	 * 　　      result,        // array, 表示题目列表
+	 * 　　       -> result[i]      // object, 表示题目信息的一个对象 {
+	 * 　　              // 以下为必有项
+	 * 　　              id,            // int, 表示题目 id
+	 * 　　              title,         // string, 表示题目的标题
+	 * 　　              submit,        // int, 表示题目的提交数
+     * 　　              pass,          // double, 表示题目的通过率
+	 * 　　              source,        // string, 表示题目的来源
+	 * 　　              // 以下为 evaluation = true 时存在项
+	 * 　　              grade,         // double, 表示题目的评分
+	 * 　　              tags           // array, 表示题目标签的列表
+	 * 　　               -> tags[i]        // string, 表示标签
+	 * 　　          }
+	 * 　　      count          // int, 表示题目数
+	 * 　　  } 的 Promise 对象
+	 */
+    select_problems_by_param_order,
+    // 创建题目
+    insert_problem,
+    // 修改题目
+    update_problem,
+    // 删除题目
+    delete_problem,
+    
 };
